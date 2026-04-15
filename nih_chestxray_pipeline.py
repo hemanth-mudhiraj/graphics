@@ -666,7 +666,7 @@ def evaluate_test(model, test_loader, device):
     ckpt_path = os.path.join(CFG.OUTPUT_DIR, "best_model.pth")
     if os.path.exists(ckpt_path):
         print("Loading best model checkpoint...")
-        checkpoint = torch.load(ckpt_path, map_location=device)
+        checkpoint = torch.load(ckpt_path, map_location=device, weights_only=False)
         if hasattr(model, "module"):
             model.module.load_state_dict(checkpoint["model_state_dict"])
         else:

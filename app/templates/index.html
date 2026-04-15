@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CheXNet - Chest X-ray Classifier</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CheXNet</h1>
+            <p class="subtitle">AI-Powered Chest X-ray Disease Classification</p>
+            <p class="description">Upload a chest X-ray image to detect 14 thoracic diseases using a DenseNet121-based deep learning model.</p>
+        </header>
+
+        <div class="upload-section">
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-zone-content">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <p>Drag & drop a chest X-ray image here</p>
+                    <span>or</span>
+                    <button id="browse-btn" class="btn btn-primary">Browse Files</button>
+                    <p class="file-hint">Supports JPEG, PNG (max 10 MB)</p>
+                </div>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </div>
+        </div>
+
+        <div id="preview-section" class="preview-section hidden">
+            <img id="preview-image" alt="Uploaded X-ray preview">
+            <div class="preview-info">
+                <span id="file-name"></span>
+                <button id="clear-btn" class="btn btn-secondary">Clear</button>
+            </div>
+        </div>
+
+        <button id="predict-btn" class="btn btn-predict hidden">Analyze X-ray</button>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Analyzing image...</p>
+        </div>
+
+        <div id="results-section" class="results-section hidden">
+            <h2>Classification Results</h2>
+            <div id="results-list" class="results-list"></div>
+            <p class="disclaimer">This tool is for research/educational purposes only. Not for clinical diagnosis.</p>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const browseBtn = document.getElementById('browse-btn');
+        const previewSection = document.getElementById('preview-section');
+        const previewImage = document.getElementById('preview-image');
+        const fileName = document.getElementById('file-name');
+        const clearBtn = document.getElementById('clear-btn');
+        const predictBtn = document.getElementById('predict-btn');
+        const loading = document.getElementById('loading');
+        const resultsSection = document.getElementById('results-section');
+        const resultsList = document.getElementById('results-list');
+
+        let selectedFile = null;
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) handleFile(files[0]);
+        });
+
+        browseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        clearBtn.addEventListener('click', clearSelection);
+
+        predictBtn.addEventListener('click', runPrediction);
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file.');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File is too large. Maximum size is 10 MB.');
+                return;
+            }
+
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                fileName.textContent = file.name;
+                dropZone.classList.add('hidden');
+                previewSection.classList.remove('hidden');
+                predictBtn.classList.remove('hidden');
+                resultsSection.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearSelection() {
+            selectedFile = null;
+            fileInput.value = '';
+            previewSection.classList.add('hidden');
+            predictBtn.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+        }
+
+        async function runPrediction() {
+            if (!selectedFile) return;
+
+            predictBtn.classList.add('hidden');
+            loading.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/predict', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Prediction failed');
+                }
+
+                displayResults(data.predictions);
+            } catch (error) {
+                alert('Error: ' + error.message);
+                predictBtn.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayResults(predictions) {
+            resultsList.innerHTML = '';
+
+            predictions.forEach((item, index) => {
+                const percentage = (item.probability * 100).toFixed(1);
+                const isSignificant = item.probability >= 0.5;
+                const isModerate = item.probability >= 0.3 && item.probability < 0.5;
+
+                const row = document.createElement('div');
+                row.className = `result-row ${isSignificant ? 'significant' : ''} ${isModerate ? 'moderate' : ''}`;
+                row.style.animationDelay = `${index * 0.05}s`;
+
+                row.innerHTML = `
+                    <div class="result-header">
+                        <span class="disease-name">${item.disease.replace('_', ' ')}</span>
+                        <span class="probability">${percentage}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percentage}%"></div>
+                    </div>
+                `;
+
+                resultsList.appendChild(row);
+            });
+
+            resultsSection.classList.remove('hidden');
+            predictBtn.classList.remove('hidden');
+            predictBtn.textContent = 'Analyze Again';
+        }
+    </script>
+</body>
+</html>
