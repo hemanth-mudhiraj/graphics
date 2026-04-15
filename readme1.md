@@ -1,3 +1,7 @@
+## Why This Dataset?
+
+Everyone saw a 45 GB beast of a dataset and walked the other way. We saw it and said, "let's make it work." The NIH Chest X-ray dataset is massive, messy, and unapologetic about crashing your RAM — so we fought back with Dask for lazy computation, Parquet for efficient storage, and aggressive garbage collection to keep memory in check. No downsampling, no shortcuts, no trimming the data to fit the machine. We made the machine fit the data.
+
 ## How the Pipeline Works
 
 Before the model can learn anything, we need to wrangle the raw data into something usable. The pipeline starts by scanning through the NIH Chest X-ray dataset — which is spread across multiple folders like `images_001`, `images_002`, and so on — and building a quick lookup map of every PNG file it finds. Then it reads the massive metadata CSV using Dask so we don't blow up memory, cleans up the column names, and converts the disease labels (things like "Atelectasis|Effusion") into a simple multi-hot vector of 14 columns. Once that's done, everything gets saved as a Parquet file so we never have to repeat this work again.
