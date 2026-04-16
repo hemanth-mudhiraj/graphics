@@ -1,0 +1,63 @@
+All files are in place. Here's the complete setup:
+
+  ---
+  Project Structure
+
+  Graphics/
+  ├── backend/
+  │   ├── app.py                 # Flask API (predict + Gemini recommendations)
+  │   ├── model.py               # CheXNet model + Grad-CAM heatmap generation
+  │   ├── gemini_service.py      # Gemini API integration (do's & don'ts)
+  │   ├── requirements.txt
+  │   └── Dockerfile
+  ├── frontend/
+  │   ├── src/
+  │   │   ├── App.jsx            # Main app with state management
+  │   │   ├── main.jsx           # Entry point
+  │   │   ├── index.css           # Tailwind + custom styles (glass morphism)
+  │   │   └── components/
+  │   │       ├── Header.jsx      # Logos (GEU left, CUR right) + title
+  │   │       ├── UploadSection.jsx  # Drag & drop upload
+  │   │       ├── HeatmapViewer.jsx  # 3 views: original/overlay/heatmap
+  │   │       ├── ResultsPanel.jsx   # Disease probabilities with bars
+  │   │       ├── Recommendations.jsx # Do's, Don'ts, severity, doctor advice
+  │   │       └── Footer.jsx
+  │   ├── package.json
+  │   ├── vite.config.js          # Dev proxy to Flask backend
+  │   ├── tailwind.config.js
+  │   ├── Dockerfile + nginx.conf
+  │   └── index.html
+  ├── docker-compose.yml
+  ├── .env.example
+  └── best_model.pth             # (place your trained model here)
+
+  Key Features Implemented
+
+  1. Grad-CAM Heatmap (backend/model.py) - Hooks into DenseNet121's last conv layer, generates
+   activation maps for the top predicted class, overlays on the original X-ray
+  2. Gemini Integration (backend/gemini_service.py) - Sends predicted disease to Gemini 2.0   
+  Flash, returns structured do's/don'ts/severity/advice with fallback if API is unavailable   
+  3. React UI - Dark glass-morphism theme, drag-and-drop upload, 3-view heatmap toggle        
+  (original/overlay/heatmap-only), color-coded probability bars, do's & don'ts cards
+  4. Logos - In Header.jsx lines 7-8, set graphicEraLogo and curLogo to your image paths      
+
+  How to Run
+
+  Local development:
+  # Backend
+  cd backend
+  pip install -r requirements.txt
+  GEMINI_API_KEY=your_key python app.py
+
+  # Frontend (separate terminal)
+  cd frontend
+  npm install
+  npm run dev
+
+  Docker:
+  cp .env.example .env
+  # Edit .env with your GEMINI_API_KEY
+  # Place best_model.pth in project root
+  docker-compose up --build
+
+  The app will be at http://localhost (port 80) with the API proxied to Flask on port 5000.   

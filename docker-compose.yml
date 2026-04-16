@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    container_name: chexnet-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MODEL_PATH=/app/best_model.pth
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./best_model.pth:/app/best_model.pth:ro
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: chexnet-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
